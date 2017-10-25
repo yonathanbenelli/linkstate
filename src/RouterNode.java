@@ -1,6 +1,8 @@
 import java.util.*;
 import java.util.Map.Entry;
 
+import javax.swing.plaf.basic.BasicInternalFrameTitlePane.MaximizeAction;
+
 public class RouterNode {
  
 	private int myID;
@@ -144,19 +146,35 @@ public class RouterNode {
 		
 	}
   
+	@SuppressWarnings("static-access")
 	public void hagoDijkstra(){
 	
 		//distancias desde el nodo que ejecuta Dijstra a todos los demás nodos.
 		//Recordar que Integer[0] es el nodo por donde se debe ir inmediatamente después para llegar desde myID hasta el nodo "columna"
 		//Integer[1] es el costo de ir al nodo columna
-		
+				
 		HashMap<Integer, Integer[]> distancias = this.map.get(this.myID);
 		
 		boolean[] visitado = new boolean[distancias.size()];  
 		int cantVisitados = 0;
 		
-		for(boolean v: visitado){
+		for(@SuppressWarnings("unused") boolean v: visitado){
 			v = false;
+		}
+		
+		Iterator<Entry<Integer,Integer[]>> it2 = distancias.entrySet().iterator();
+		while (it2.hasNext()){
+			
+			Map.Entry<Integer, Integer[]> e = (Map.Entry<Integer, Integer[]>)it2.next();
+			if (!this.vecinos.contains(e.getKey()) && e.getKey() != this.myID){
+				Integer[] arr = new Integer[2];
+				arr[0] = null;
+				arr[1] = this.sim.INFINITY;
+				distancias.put(e.getKey(), arr);
+			};
+			
+			//VER COMO HACER PARA CARGAR LOS PESOS ORIGINALES DEL GRAFO PARA LOS VECINOS
+			
 		}
 		
 		visitado[myID] = true;
@@ -166,31 +184,34 @@ public class RouterNode {
 			
 			//Tomar el mínimo del vector distancia y que no esté visitado;
 			int idNodoMin = buscarMinimo(distancias,visitado);
-			
-			Map.Entry<Integer, Integer[]> e = (Map.Entry<Integer, Integer[]>)it.next();
-			Integer idActual =(Integer) e.getKey();
-			visitado[idActual] = true;
+			visitado[idNodoMin] = true;
 			cantVisitados ++;
 			
 			//Las distancias desde el nodo mínimo del vector distancia y que no esté visitado a todos los demás.
 			HashMap<Integer, Integer[]> distanciasAlNodoMinimo = this.map.get(idNodoMin);
-			//Habría que chequear solo por los vecinos de ese nodo, pero no podemos tener esa información desde el myID
+			//Solo se chequea por los vecinos de ese nodo.
 			
 			Iterator<Entry<Integer, Integer[]>> it = distancias.entrySet().iterator();
 			while (it.hasNext()){
 				
 				Map.Entry<Integer, Integer[]> aux = (Map.Entry<Integer, Integer[]>)it.next();
 				
-				int distanciaActual = distancias.get(aux.getKey())[1];
-				int distanciaCandidata = distancias.get(idNodoMin)[1] + distanciasAlNodoMinimo.get(aux.getKey())[1];
-				if (distanciaActual > distanciaCandidata){
-					Integer[] arr = new Integer[2];
-					arr[0] = distancias.get(aux.getKey())[0];
-					arr[1] = distanciaCandidata;
-					distancias.put(aux.getKey(), arr);
+				//Solo si el minimo y el nodo donde está it2 son vecinos.
+				if (distanciasAlNodoMinimo.get(aux.getKey())[1] != this.sim.INFINITY){
+				
+					int distanciaActual = distancias.get(aux.getKey())[1];
+					int distanciaCandidata = distancias.get(idNodoMin)[1] + distanciasAlNodoMinimo.get(aux.getKey())[1];
+					if (distanciaActual > distanciaCandidata){
+						Integer[] arr = new Integer[2];
+						arr[0] = idNodoMin;
+						arr[1] = distanciaCandidata;
+						distancias.put(aux.getKey(), arr);
+					}
+				
 				}
-					
+				
 			}
+			
 		}
 		
 		//Acomodo el vector
@@ -198,6 +219,26 @@ public class RouterNode {
 		
 	}
 	
+	private int buscarMinimo(HashMap<Integer, Integer[]> distancias, boolean[] visitado) {
+		
+		Iterator<Entry<Integer, Integer[]>> it = distancias.entrySet().iterator();
+		
+		int min = 2147483647; //Max valor para int 32 bits
+		int res = 0;
+		
+		while (it.hasNext()){
+			
+			Map.Entry<Integer, Integer[]> e = (Map.Entry<Integer, Integer[]>)it.next();
+			if (min > e.getValue()[1] && !visitado[e.getKey()]){
+				min = e.getValue()[1];
+				res = e.getKey();
+			}
+			
+		}
+		
+		return res;
+	}
+
 	//--------------------------------------------------
 	public void recvUpdate(RouterPacket pkt){
 		
@@ -346,6 +387,8 @@ public class RouterNode {
 	  //Me aseguro que el destino sea siempre un nodo vecino y que el costo sea realmente diferente
 	  if(vecinos.contains(dest) && map.get(myID).get(dest)[1]!=newcost){
 		  
+		  
+		  System.out.println("Destino: " + dest + "Costo: " + newcost);
 		  //sustituyo el nuevo valor del costo del link
 		  miEstadoEnlace.put(dest,newcost);
 		  rearmoTablaPorLinkUpdate();

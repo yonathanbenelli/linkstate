@@ -119,11 +119,18 @@ should not have to, and you defeinitely should not have to modify
       evptr.dest = 1;
       evptr.cost = 60;
       insertevent(evptr);
+      
+      evptr = new Event();
+      evptr.evtime =  40;
+      evptr.evtype =  LINK_CHANGE;
+      evptr.eventity =  1;
+      evptr.rtpktptr =  null;
+      evptr.dest = 0;
+      evptr.cost = 60;
+      insertevent(evptr);
     }
   
   }
-
-
 
   void runSimulation(){
     Event eventptr;
