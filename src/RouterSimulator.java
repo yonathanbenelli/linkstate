@@ -14,7 +14,7 @@ Output GUIs added by Ch. Schuba 2007.
 
 public class RouterSimulator {
 
-  public static final int NUM_NODES = 4;
+  public static final int NUM_NODES = 9;
   public static final int INFINITY = 999;
 
   public static final boolean LINKCHANGES = true;
@@ -87,16 +87,31 @@ should not have to, and you defeinitely should not have to modify
 
     /* set initial costs */
     // remember that in java everything defaults to 0
-    connectcosts[0][1]=4;  
-    connectcosts[0][2]=1;
-    connectcosts[0][3]=2;
-    connectcosts[1][0]=4;
-    connectcosts[1][2]=50;
-    connectcosts[2][0]=1;
-    connectcosts[2][1]=50;
-    connectcosts[2][3]=6;
-    connectcosts[3][0]=2;
-    connectcosts[3][2]=6;
+    
+    for(int i=0; i<NUM_NODES; i++)
+    	for(int j=0; j<NUM_NODES; j++)
+    		connectcosts[i][j] = INFINITY;
+    
+    connectcosts[0][3]=1;  
+    connectcosts[3][0]=1;
+    connectcosts[0][4]=1;
+    connectcosts[4][0]=1;
+    connectcosts[4][3]=3;
+    connectcosts[3][4]=3;
+    connectcosts[3][1]=5;
+    connectcosts[1][3]=5;
+    connectcosts[1][2]=2;
+    connectcosts[2][1]=2;
+    connectcosts[3][5]=100;
+    connectcosts[5][3]=100;
+    connectcosts[4][6]=2;
+    connectcosts[6][4]=2;
+    connectcosts[6][7]=2;
+    connectcosts[7][6]=2;
+    connectcosts[6][5]=5;
+    connectcosts[5][6]=5;
+    connectcosts[5][7]=50;
+    connectcosts[7][5]=50;
     
     nodes = new RouterNode[NUM_NODES];
     for(int i=0; i<NUM_NODES; i++){
@@ -111,23 +126,43 @@ should not have to, and you defeinitely should not have to modify
 
     /* initialize future link changes */
     if (LINKCHANGES)   {
+      
       evptr = new Event();
-      evptr.evtime =  40;
+      evptr.evtime =  80;
       evptr.evtype =  LINK_CHANGE;
       evptr.eventity =  0;
       evptr.rtpktptr =  null;
-      evptr.dest = 1;
-      evptr.cost = 60;
+      evptr.dest = 4;
+      evptr.cost = 10;
+      insertevent(evptr);
+      
+      evptr = new Event();
+      evptr.evtime =  80;
+      evptr.evtype =  LINK_CHANGE;
+      evptr.eventity = 4;
+      evptr.rtpktptr =  null;
+      evptr.dest = 0;
+      evptr.cost = 10;
       insertevent(evptr);
       
       evptr = new Event();
       evptr.evtime =  40;
       evptr.evtype =  LINK_CHANGE;
-      evptr.eventity =  1;
+      evptr.eventity =  6;
       evptr.rtpktptr =  null;
-      evptr.dest = 0;
-      evptr.cost = 60;
+      evptr.dest = 4;
+      evptr.cost = 200;
       insertevent(evptr);
+      
+      evptr = new Event();
+      evptr.evtime =  40;
+      evptr.evtype =  LINK_CHANGE;
+      evptr.eventity = 4;
+      evptr.rtpktptr =  null;
+      evptr.dest = 6;
+      evptr.cost = 200;
+      insertevent(evptr);
+      
     }
   
   }
