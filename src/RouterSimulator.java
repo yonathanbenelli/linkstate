@@ -14,7 +14,7 @@ Output GUIs added by Ch. Schuba 2007.
 
 public class RouterSimulator {
 
-  public static final int NUM_NODES = 8;
+  public static final int NUM_NODES = 9;
   public static final int INFINITY = 999;
 
   public static final boolean LINKCHANGES = true;

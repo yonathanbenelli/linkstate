@@ -11,8 +11,7 @@ public class RouterNode {
 	private HashMap<Integer, HashMap<Integer, Integer[]>> map;
 	private HashMap<Integer, Integer> miEstadoEnlace;
 	private Integer serialFlood=1;
-	private List<Integer> vecinos;
-	private List<Integer> nodosRed;
+
 	private List<RouterPacket> listaFloodControlado=new ArrayList<RouterPacket>();
 	//--------------------------------------------------
   
@@ -24,8 +23,7 @@ public class RouterNode {
 	    //Instancio map que sera mi tabla de ruteo que contiene En filas el origen, en columnas el destino, y en cada lugar 
 	    //el par camino/costo de la forma [Integer camino]integer costo
 	    map=  new HashMap<Integer, HashMap<Integer, Integer[]>>();
-	    vecinos = new ArrayList<Integer>();
-	    nodosRed = new ArrayList<Integer>();
+	   
 	    
 	    //Itero sobre los costos de los vecinos recibido en el construcor
 	    Iterator it = costs.entrySet().iterator();
@@ -37,14 +35,8 @@ public class RouterNode {
 			Integer vecino=(Integer) e.getKey();
 			//obtengo costo del vecino
 			Integer vecinoCostoInteger=(Integer) e.getValue();
-			//si el vecino no existe lo agrego a mi lista de vecinos, para luego saber a quien notificar
-			if (!vecinos.contains(vecino))
-				vecinos.add(vecino);
-			  
-			//si el nodo vecino no existe lo agrego a mi lista de nodos de la red
-			if (!nodosRed.contains(vecino))
-				nodosRed.add(vecino);
-			  
+			
+			
 			//Obtengo mi estado de enlace de la tabla de ruteo, sino existe aun lo instancio y me asigno a mi mismo el costo 0
 			//miEstadoEnlaceEnTablaR es mis costos  mis vecinos (y a mi mismo), mas los destinos alcanzables y sus costos luego de aplicar dijkstra
 			//miEstadoEnlace es solo mis costos a mis vecinos (y a mi mismo)
@@ -52,47 +44,63 @@ public class RouterNode {
 			if(miEstadoEnlaceEnTablaR==null) {
 				
 				//me agrego a mi mismo como destino
-				if (!nodosRed.contains(myID))
-					nodosRed.add(myID);
 				
 				miEstadoEnlaceEnTablaR=new HashMap<Integer,Integer[]>();
-				miEstadoEnlaceEnTablaR.put(myID, new Integer[]{myID,0});
-			    
+				miEstadoEnlaceEnTablaR.put(myID, new Integer[]{myID,0,0});
 				miEstadoEnlace=new HashMap<Integer,Integer>();
-				miEstadoEnlace.put(myID, 0);
+			//	miEstadoEnlace.put(myID, 0);
 			    
 			}
 			 
 			//Agrego el costo del vecino correspondiente al paso de la iteracion en este momento
-			miEstadoEnlaceEnTablaR.put(vecino, new Integer[]{vecino,vecinoCostoInteger});
+			miEstadoEnlaceEnTablaR.put(vecino, new Integer[]{vecino,vecinoCostoInteger,0});
 			miEstadoEnlace.put(vecino, vecinoCostoInteger);
 			//Agrego mi estdoEnlaceEnTabla a mi tabla de ruteo			
 			map.put(myID, miEstadoEnlaceEnTablaR);
 			
 		}
-		//relleno los valores infinitos
-		rellenarInfinitos();
+		//relleno los valores infinitos y aprendo topologia
+		aprendoTopologia(myID);
 		   
 		//Notifico a todos mis vecinos que hubo cambios dado que antes no tenia datos
 		hagoFlooding(null);	
 	
 	}
   
-	private void rellenarInfinitos(){
+	private void aprendoTopologia(Integer idNodoConNuevoVecino){
 
-		for (Integer v1 : nodosRed) {
-			for (Integer v2 : nodosRed) {
+		//hagao la matriz cuadrada con lo nuevo, e infinitos donde corresponda
+		HashMap<Integer, Integer[]> nodosRed=map.get(idNodoConNuevoVecino);
+		if(nodosRed!=null)
+		{
+		Iterator<Entry<Integer,Integer[]>> it1 = nodosRed.entrySet().iterator();
+		while (it1.hasNext()){
 			
-				HashMap<Integer, Integer[]> vecinoVector=map.get(v1);
-				if(vecinoVector==null)
-					vecinoVector=new HashMap<Integer,Integer[]>();
-				if(vecinoVector.get(v2)==null)
-					vecinoVector.put(v2, new Integer[]{null,this.sim.INFINITY});
-			    map.put(v1, vecinoVector);
+			Map.Entry<Integer, Integer[]> e = (Map.Entry<Integer, Integer[]>)it1.next();
+			Integer v1=e.getKey();
+
+			Iterator<Entry<Integer,Integer[]>> it2 = nodosRed.entrySet().iterator();
+			while (it2.hasNext()){
+				
+				Map.Entry<Integer, Integer[]> e2 = (Map.Entry<Integer, Integer[]>)it2.next();
+				Integer v2=e2.getKey();
+			
+							HashMap<Integer, Integer[]> vecinoVector=map.get(v1);
+							if(vecinoVector==null)
+								vecinoVector=new HashMap<Integer,Integer[]>();
+							if(vecinoVector.get(v2)==null)
+							{
+
+								if(v1==v2)
+									vecinoVector.put(v2, new Integer[]{null,0,0});
+									else
+								vecinoVector.put(v2, new Integer[]{null,this.sim.INFINITY,0});
+							}
+						    map.put(v1, vecinoVector);
 			 
 			}
 		}
-	  
+		} 
 	}
   
 	private Integer obtenerSerialFlooding(){
@@ -102,8 +110,12 @@ public class RouterNode {
 	private HashMap<Integer, Integer> obtengoMiEstadoEnlace(){
 		
 	  //armo de mi tabla de ruteo mi vector de distancia, es decir le quito el componente camino de la calve camino/costo 
-	  HashMap<Integer, Integer> dvAEnviar= (HashMap<Integer, Integer>) miEstadoEnlace.clone();
-	  dvAEnviar.put(-1, obtenerSerialFlooding());
+		  HashMap<Integer, Integer> dvAEnviar=null;
+		if(miEstadoEnlace!=null)
+		{
+			 dvAEnviar= (HashMap<Integer, Integer>) miEstadoEnlace.clone();
+			 dvAEnviar.put(-1, obtenerSerialFlooding());
+		}
 	  return dvAEnviar;
 	  
 	}
@@ -125,16 +137,22 @@ public class RouterNode {
 		  origen=pktToFlood.sourceid;
 	  
 		}
- 
+		if(dv!=null)
+		{
 		//recorro la lista de mis vecinos para notificarlos y enviarles mi vector de distancia
-		for (Integer vecinoID : vecinos) {
-		  
-			pkt= new RouterPacket(origen, vecinoID, (HashMap<Integer, Integer>) dv.clone());
-			sendUpdate(pkt);
-		
+		HashMap<Integer, Integer> vecinos=miEstadoEnlace;
+		Iterator<Entry<Integer,Integer>> it1 = vecinos.entrySet().iterator();
+		while (it1.hasNext()){
+			Integer vecinoID=((Map.Entry<Integer, Integer>)it1.next()).getKey();
+		//	if(dv.get(vecinoID)!=sim.INFINITY)
+		//	{
+				pkt= new RouterPacket(origen, vecinoID, (HashMap<Integer, Integer>) dv.clone());
+				sendUpdate(pkt);
+		//	}
 		}
 		if(pkt!=null)
 			listaFloodControlado.add(pkt);
+		}
 	}
   
 	private Boolean floodingControlado(RouterPacket pkt){
@@ -146,112 +164,95 @@ public class RouterNode {
 		
 	}
   
-	@SuppressWarnings({ "static-access", "unchecked" })
 	public void hagoDijkstra(){
 	
 		//distancias desde el nodo que ejecuta Dijstra a todos los demás nodos.
 		//Recordar que Integer[0] es el nodo por donde se debe ir inmediatamente después para llegar desde myID hasta el nodo "columna"
 		//Integer[1] es el costo de ir al nodo columna
 				
-		HashMap<Integer, Integer[]> distancias = this.map.get(this.myID);
+		HashMap<Integer, Integer[]> miEstadoEnlaceEnTablaR = this.map.get(this.myID);
 		//Uso un hash map para no tener problemas con los indices del array cuando en distancias no tengo todos los nodos
 		//o cuando tengo numeros de nodos mayores al tamaño del array.
 		//solo se utiliza la pos 0 del array, Integer[0] = 0 indica no visitado, Integer[1] = 1 indica visitado.
 		//Dejo el arreglo para poder usar clone.
-		HashMap<Integer, Integer[]> visitado = (HashMap<Integer, Integer[]>) distancias.clone();
 		
 		int cantVisitados = 0;
 		
-		//Inicializa todos los nodos como no visitados
-		Integer[] ini = new Integer[1];
-		ini[0] = 0;
-
-		Iterator<Entry<Integer,Integer[]>> it1 = visitado.entrySet().iterator();
-		while (it1.hasNext()){
-			Map.Entry e = (Map.Entry)it1.next();
-		    Integer key=(Integer) e.getKey();
-			visitado.put(key, ini);
-		}
-		Iterator<Entry<Integer,Integer[]>> it2 = distancias.entrySet().iterator();
-		while (it2.hasNext()){
-			
-			Map.Entry<Integer, Integer[]> e = (Map.Entry<Integer, Integer[]>)it2.next();
-			if (!this.vecinos.contains(e.getKey()) && e.getKey() != this.myID){
-				Integer[] arr = new Integer[2];
-				arr[0] = null;
-				arr[1] = this.sim.INFINITY;
-				distancias.put(e.getKey(), arr);
-			} else{
-				Integer[] arr = new Integer[2];
-				arr[0] = e.getKey();
-				arr[1] = this.miEstadoEnlace.get(e.getKey());
-				distancias.put(e.getKey(), arr);
-			}
-						
-		}
 		
-		Integer[] update1 = new Integer[1];
-		update1[0] = 1;
-		visitado.put(myID, update1);
+		miEstadoEnlaceEnTablaR.get(myID)[2]=1;
 		cantVisitados ++;
 		
-		while (cantVisitados != distancias.size()){
+		while (cantVisitados <= miEstadoEnlaceEnTablaR.size()){
 			
 			//Tomar el nodo mínimo del vector distancia y que no esté visitado;
-			int idNodoMin = buscarMinimo(distancias,visitado);
-			Integer[] update2 = new Integer[1];
-			update2[0] = 1;
-			visitado.put(idNodoMin, update2);
-			
-			cantVisitados ++;
-			
-			//Las distancias desde el nodo mínimo del vector distancia y que no esté visitado a todos los demás.
-			HashMap<Integer, Integer[]> distanciasAlNodoMinimo = this.map.get(idNodoMin);
-			//Solo se chequea por los vecinos de ese nodo.
-			
-			Iterator<Entry<Integer, Integer[]>> it = distancias.entrySet().iterator();
-			while (it.hasNext()){
+			//int idNodoMin = buscarMinimo(distancias,visitado);
+			Integer idNodoMin = buscarMinimo(miEstadoEnlaceEnTablaR);
+			if(idNodoMin==null)
+				cantVisitados=miEstadoEnlaceEnTablaR.size()+1;
+			else
 				
-				Map.Entry<Integer, Integer[]> aux2 = (Map.Entry<Integer, Integer[]>)it.next();
+			{
+				miEstadoEnlaceEnTablaR.get(idNodoMin)[2]=1;
+					cantVisitados ++;
 				
-				//Solo si el minimo y el nodo donde está it2 son vecinos.
-				if (distanciasAlNodoMinimo.get(aux2.getKey())[1] != this.sim.INFINITY){
 				
-					int distanciaActual = distancias.get(aux2.getKey())[1];
-					int distanciaCandidata = distancias.get(idNodoMin)[1] + distanciasAlNodoMinimo.get(aux2.getKey())[1];
-					if (distanciaActual > distanciaCandidata){
-						Integer[] arr = new Integer[2];
-						//En la pos 0 va el nodo por el que se llega al nodo minimo
-						arr[0] = distancias.get(idNodoMin)[0];
-						//En la pos 1 va la nueva distancia al nodo donde está it2 
-						arr[1] = distanciaCandidata;
-						distancias.put(aux2.getKey(), arr);
+				//Las distancias desde el nodo mínimo del vector distancia y que no esté visitado a todos los demás.
+				HashMap<Integer, Integer[]> distanciasAlNodoMinimo = this.map.get(idNodoMin);
+				//Solo se chequea por los vecinos de ese nodo.
+				
+				Iterator<Entry<Integer, Integer[]>> it = miEstadoEnlaceEnTablaR.entrySet().iterator();
+				while (it.hasNext()){
+					
+					Map.Entry<Integer, Integer[]> aux2 = (Map.Entry<Integer, Integer[]>)it.next();
+					
+					//Solo si el minimo y el nodo donde está it2 son vecinos.
+					if (distanciasAlNodoMinimo.get(aux2.getKey())[1] != this.sim.INFINITY){
+					
+						int distanciaActual = miEstadoEnlaceEnTablaR.get(aux2.getKey())[1];
+						int distanciaCandidata = miEstadoEnlaceEnTablaR.get(idNodoMin)[1] + distanciasAlNodoMinimo.get(aux2.getKey())[1];
+						if (distanciaActual > distanciaCandidata){
+							//En la pos 0 va el nodo por el que se llega al nodo minimo
+							//En la pos 1 va la nueva distancia al nodo donde está it2 
+							//Se copia en el nodo la puerta por donde sale el padre.
+							
+							miEstadoEnlaceEnTablaR.put( aux2.getKey(),new Integer[]{miEstadoEnlaceEnTablaR.get(idNodoMin)[0],distanciaCandidata,miEstadoEnlaceEnTablaR.get( aux2.getKey())[2]});
+						}
+					
 					}
-				
+					
 				}
-				
-			}
-			
+			}		
 		}
 		
 		//Acomodo el vector
-		map.put(myID,distancias);
+		map.put(myID,miEstadoEnlaceEnTablaR);
 		
 	}
 	
-	private int buscarMinimo(HashMap<Integer, Integer[]> distancias, HashMap<Integer, Integer[]> visitado) {
-		
+	//private int buscarMinimo(HashMap<Integer, Integer[]> distancias, HashMap<Integer, Integer[]> visitado) {
+		private Integer buscarMinimo(HashMap<Integer, Integer[]> distancias) {
+				
 		Iterator<Entry<Integer, Integer[]>> it = distancias.entrySet().iterator();
 		
-		int min = 2147483647; //Max valor para int 32 bits
-		int res = 0;
+		int min = sim.INFINITY; 
+		Boolean primero=true;
+		Integer res =null;
 		
 		while (it.hasNext()){
 			
 			Map.Entry<Integer, Integer[]> e = (Map.Entry<Integer, Integer[]>)it.next();
-			if (min > e.getValue()[1] && (visitado.get(e.getKey())[0] == 0)){
-				min = e.getValue()[1];
-				res = e.getKey();
+			if((e.getValue()[2] == 0))
+			{
+				if(primero)
+				{
+					res = e.getKey();
+					primero=false;
+				}
+				if ((min > e.getValue()[1] ) ){
+					min = e.getValue()[1];
+					res = e.getKey();
+					
+				}
 			}
 			
 		}
@@ -269,9 +270,11 @@ public class RouterNode {
 			Integer origen=pkt.sourceid;
 		  
 			//si el origen no existe lo agrego a mi lista de nodos de red
-			if (!nodosRed.contains(origen)){
-				nodosRed.add(origen);
-		    	map.put(origen,new HashMap<Integer,Integer[]>());
+			if (map.get(origen)==null){
+				
+				map.put(origen,new HashMap<Integer,Integer[]>());
+				map.get(origen).put(origen,new Integer[]{null,0,0} );
+				
 			}  	
 		    
 			//itero sobre el estado de enlace de dicho nodo origen
@@ -289,15 +292,14 @@ public class RouterNode {
 				    Integer costoVecinoOrigen=(Integer) e.getValue();
 					
 					//Agrego el vecino de dicho origen a mi tabla de ruteo
-					map.get(origen).put(idVecinoOrigen,new Integer[]{null,costoVecinoOrigen} );
+					map.get(origen).put(idVecinoOrigen,new Integer[]{null,costoVecinoOrigen,0} );
 						    
 					//si este vecino del origen no existe lo agrego a mi lista de destinos
-					if (!nodosRed.contains(idVecinoOrigen))
-						nodosRed.add(idVecinoOrigen);
 			    }
 			}
-		  
-			rellenarInfinitos();	  
+			//relleno los valores infinitos y aprendo topologia
+			aprendoTopologia(origen);	  
+			rearmoTabla();
 			hagoFlooding(pkt);
 			hagoDijkstra();
 		}
@@ -385,31 +387,39 @@ public class RouterNode {
 	  }
   }
 
-  private void rearmoTablaPorLinkUpdate(){
+  private void rearmoTabla(){
 	  
 	  HashMap<Integer,Integer[]> miEstadoEnlaceEnTablaR=map.get(myID);
-	  Iterator itO = miEstadoEnlace.entrySet().iterator();
+	  
+	  Iterator itO = miEstadoEnlaceEnTablaR.entrySet().iterator();
+	  miEstadoEnlace.entrySet().iterator();
 	  
 	  //Itero sobre mi estado enlace para actualizar la tabla de routeo
 	  while (itO.hasNext()) {
 		  
 		    Map.Entry o = (Map.Entry)itO.next();
 		    Integer key=(Integer) o.getKey();
-		    Integer value=(Integer) o.getValue();
-		    miEstadoEnlaceEnTablaR.put(key, new Integer[]{key,value});
+		    
+		    if(miEstadoEnlace.containsKey(key))
+		   		    miEstadoEnlaceEnTablaR.put(key, new Integer[]{key,miEstadoEnlace.get(key),0});
+		    else
+		        miEstadoEnlaceEnTablaR.put(key, new Integer[]{null,sim.INFINITY,0});
+		   
 	  
 	  }
+	  miEstadoEnlaceEnTablaR.put(myID, new Integer[]{myID,0,0});
 	  map.put(myID, miEstadoEnlaceEnTablaR);
   }
   
   //--------------------------------------------------
   public void updateLinkCost(int dest, int newcost) {
 	  //Me aseguro que el destino sea siempre un nodo vecino y que el costo sea realmente diferente
-	  if(vecinos.contains(dest) && map.get(myID).get(dest)[1]!=newcost){
+	  if(miEstadoEnlace.containsKey(dest) && map.get(myID).get(dest)[1]!=newcost){
 		  
 		  //sustituyo el nuevo valor del costo del link
 		  miEstadoEnlace.put(dest,newcost);
-		  rearmoTablaPorLinkUpdate();
+		  
+		  rearmoTabla();
 		  hagoFlooding(null);
 		  hagoDijkstra();
 	  
