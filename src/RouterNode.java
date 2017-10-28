@@ -165,9 +165,13 @@ public class RouterNode {
 		//Inicializa todos los nodos como no visitados
 		Integer[] ini = new Integer[1];
 		ini[0] = 0;
-		for (HashMap.Entry<Integer, Integer[]> entry : visitado.entrySet())
-			visitado.put(entry.getKey(), ini);
-		
+
+		Iterator<Entry<Integer,Integer[]>> it1 = visitado.entrySet().iterator();
+		while (it1.hasNext()){
+			Map.Entry e = (Map.Entry)it1.next();
+		    Integer key=(Integer) e.getKey();
+			visitado.put(key, ini);
+		}
 		Iterator<Entry<Integer,Integer[]>> it2 = distancias.entrySet().iterator();
 		while (it2.hasNext()){
 			
