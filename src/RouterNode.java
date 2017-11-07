@@ -398,9 +398,9 @@ public class RouterNode {
 		HashMap<Integer,Integer[]> miEstadoEnlaceEnTablaR=map.get(myID);
 	  
 		Iterator<Entry<Integer, Integer[]>> itO = miEstadoEnlaceEnTablaR.entrySet().iterator();
-		miEstadoEnlace.entrySet().iterator();
+		//miEstadoEnlace.entrySet().iterator();
 	  
-		//Itero sobre mi estado enlace para actualizar la tabla de routeo
+		//Itero sobre mi estado enlace en la tabla para actualizar la misma desde mi estado enlace
 		while (itO.hasNext()) {
 		  
 			Map.Entry<Integer, Integer[]> o = (Map.Entry<Integer, Integer[]>)itO.next();
@@ -419,12 +419,16 @@ public class RouterNode {
   
 	public void updateLinkCost(int dest, int newcost) {
 		
-		//Me aseguro que el destino sea siempre un nodo vecino y que el costo sea realmente diferente
-		if(miEstadoEnlace.containsKey(dest) && map.get(myID).get(dest)[1]!=newcost){
+		//Me aseguro que el costo sea realmente diferente
+		if(map.get(myID).get(dest)[1]!=newcost){
 		  
-			//sustituyo el nuevo valor del costo del link
+			if(newcost!=sim.INFINITY)
+			//siempre que sea diferente de Infinito (perdida enlace) sustituyo el nuevo valor del costo del link1 si ya existe o lo agrego sino
 			miEstadoEnlace.put(dest,newcost);
-		  
+			else //en caso de que sea infinito elimino el nodo de mi estado enlace
+				miEstadoEnlace.remove(dest); // Nuestro algoritmo recuerda que existio ese nodo en la topologia de la red, por mas que se haya caido su link
+				
+			
 			rearmoTabla();
 			hagoFlooding(null);
 			hagoDijkstra();
