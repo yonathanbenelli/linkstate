@@ -422,12 +422,15 @@ public class RouterNode {
 		//Me aseguro que el costo sea realmente diferente
 		if(map.get(myID).get(dest)[1]!=newcost){
 		  
-			if(newcost!=sim.INFINITY)
-			//siempre que sea diferente de Infinito (perdida enlace) sustituyo el nuevo valor del costo del link1 si ya existe o lo agrego sino
-			miEstadoEnlace.put(dest,newcost);
-			else //en caso de que sea infinito elimino el nodo de mi estado enlace
-				miEstadoEnlace.remove(dest); // Nuestro algoritmo recuerda que existio ese nodo en la topologia de la red, por mas que se haya caido su link
+//			if(newcost!=sim.INFINITY)
+//			//siempre que sea diferente de Infinito (perdida enlace) sustituyo el nuevo valor del costo del link1 si ya existe o lo agrego sino
+//			miEstadoEnlace.put(dest,newcost);
+//			else //en caso de que sea infinito elimino el nodo de mi estado enlace
+//				miEstadoEnlace.remove(dest); // Nuestro algoritmo recuerda que existio ese nodo en la topologia de la red, por mas que se haya caido su link
 				
+			//cambio seba
+			miEstadoEnlace.put(dest,newcost);
+			
 			
 			rearmoTabla();
 			hagoFlooding(null);
