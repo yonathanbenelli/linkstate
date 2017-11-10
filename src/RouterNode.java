@@ -68,8 +68,9 @@ public class RouterNode {
 	}
   
 	@SuppressWarnings("static-access")
-	private void aprendoTopologia(Integer idNodoConNuevoVecino){
-
+	private Boolean aprendoTopologia(Integer idNodoConNuevoVecino){
+		
+		boolean hayCambios = false;
 		//hago la matriz cuadrada con lo nuevo, e infinitos donde corresponda
 		HashMap<Integer, Integer[]> nodosRed=map.get(idNodoConNuevoVecino);
 		if(nodosRed!=null){
@@ -86,22 +87,25 @@ public class RouterNode {
 					Map.Entry<Integer, Integer[]> e2 = (Map.Entry<Integer, Integer[]>)it2.next();
 					Integer v2=e2.getKey();
 				
-								HashMap<Integer, Integer[]> vecinoVector=map.get(v1);
-								if(vecinoVector==null)
-									vecinoVector=new HashMap<Integer,Integer[]>();
-								if(vecinoVector.get(v2)==null)
-								{
+					HashMap<Integer, Integer[]> vecinoVector=map.get(v1);
+					if(vecinoVector==null) {
+						vecinoVector=new HashMap<Integer,Integer[]>();
+						hayCambios = true;
+					}	
+					if(vecinoVector.get(v2)==null){
 	
-									if(v1==v2)
-										vecinoVector.put(v2, new Integer[]{null,0,0});
-										else
-									vecinoVector.put(v2, new Integer[]{null,this.sim.INFINITY,0});
-								}
-							    map.put(v1, vecinoVector);
+						if(v1==v2)
+							vecinoVector.put(v2, new Integer[]{null,0,0});
+						else
+							vecinoVector.put(v2, new Integer[]{null,this.sim.INFINITY,0});
+								
+					}
+					map.put(v1, vecinoVector);
 				 
 				}
 			}	
-		} 
+		}
+		return hayCambios;
 	}
   
 	private Integer obtenerSerialFlooding(){
@@ -132,10 +136,12 @@ public class RouterNode {
 		RouterPacket pkt = null;
 		
 		//si recibo pktToFlood, implica que el paquete me fue enviado por otro nodo, si no recibo es porque este nodo comienza el flooding
-		if(pktToFlood==null)
-			//si este nodo comienza el flooding obtengo sus estado enlace
+		if(pktToFlood==null) {
+			//si este nodo comienza el flooding obtengo su estado enlace
 			dv= obtengoMiEstadoEnlace();
-		else{
+			if (myID == 0 && dv.containsKey(2))
+				System.out.println("lo tiene");
+		}else{
 			
 		  //si es flooding de un paquete de otro nodo obtengo esos datos para el reenvio
 		  dv=pktToFlood.mincost;
@@ -150,6 +156,9 @@ public class RouterNode {
 			while (it1.hasNext()){
 				Integer vecinoID=((Map.Entry<Integer, Integer>)it1.next()).getKey();
 				pkt= new RouterPacket(origen, vecinoID, (HashMap<Integer, Integer>) dv.clone());
+				
+				if (myID == 0 && vecinoID == 5 && dv.containsKey(2))
+					System.out.println("dads");
 				sendUpdate(pkt);
 			}
 			if(pkt!=null)
@@ -205,7 +214,7 @@ public class RouterNode {
 					
 					//Solo si el minimo y el nodo donde está it2 son vecinos. (Recordar que la fila del map para el nodo minimo no tiene los calculos de Dijkstra para ese nodo
 					//sino que tiene la topología de la red para el mismo
-					if (distanciasAlNodoMinimo.get(aux2.getKey())[1] != this.sim.INFINITY){
+					if ((distanciasAlNodoMinimo.get(aux2.getKey())[1] != this.sim.INFINITY)){
 					
 						int distanciaActual = miEstadoEnlaceEnTablaR.get(aux2.getKey())[1];
 						int distanciaCandidata = miEstadoEnlaceEnTablaR.get(idNodoMin)[1] + distanciasAlNodoMinimo.get(aux2.getKey())[1];
@@ -264,6 +273,14 @@ public class RouterNode {
 
 	public void recvUpdate(RouterPacket pkt){
 		
+//		if (myID == 5 && pkt.sourceid == 0) {
+//			System.out.println("LlEGA" + pkt.mincost.size());
+//			
+//			if (pkt.mincost.containsKey(1))
+//				System.out.println("tiene el 2");
+//			
+//		}
+		
 		if(!floodingControlado(pkt)){
 			
 			HashMap<Integer,Integer> mincost = pkt.mincost;
@@ -302,10 +319,12 @@ public class RouterNode {
 			}
 			
 			//relleno los valores infinitos y aprendo topologia
-			aprendoTopologia(origen);	  
+			boolean hayNuevoNodo = aprendoTopologia(origen);	  
 			rearmoTabla();
 			hagoFlooding(pkt);
 			hagoDijkstra();
+			if (hayNuevoNodo)
+				hagoFlooding(null);
 			
 		}
 	}
@@ -420,23 +439,39 @@ public class RouterNode {
 	public void updateLinkCost(int dest, int newcost) {
 		
 		//Me aseguro que el costo sea realmente diferente
-		if(map.get(myID).get(dest)[1]!=newcost){
-		  
-//			if(newcost!=sim.INFINITY)
-//			//siempre que sea diferente de Infinito (perdida enlace) sustituyo el nuevo valor del costo del link1 si ya existe o lo agrego sino
-//			miEstadoEnlace.put(dest,newcost);
-//			else //en caso de que sea infinito elimino el nodo de mi estado enlace
-//				miEstadoEnlace.remove(dest); // Nuestro algoritmo recuerda que existio ese nodo en la topologia de la red, por mas que se haya caido su link
+		if((map.get(myID).get(dest) == null) ||(map.get(myID).get(dest)[1]!=newcost)){
+		  				
+			if (newcost != sim.INFINITY) {
 				
-			//cambio seba
-			miEstadoEnlace.put(dest,newcost);
-			
-			
+				//cambio seba
+				//Si es un nodo que se conecta por primera vez.
+				if (map.get(myID).get(dest) == null) {
+					
+					map.get(myID).put(dest, new Integer[]{dest,newcost});
+					//Tambi�n agrego una fila para el nuevo destino en mi map.
+					if (map.get(dest) == null) {
+						
+						HashMap<Integer, Integer[]> filaNueva = new HashMap<Integer, Integer[]>();
+						map.put(dest, filaNueva);
+						aprendoTopologia(myID);
+						
+					};
+					
+					miEstadoEnlace.put(dest,newcost);
+				
+				}else {
+					miEstadoEnlace.put(dest,newcost);
+				}
+				
+			}else {
+				miEstadoEnlace.put(dest,newcost);
+			}
+				
 			rearmoTabla();
 			hagoFlooding(null);
 			hagoDijkstra();
 	  
 		}
 	}
-
+	
 }

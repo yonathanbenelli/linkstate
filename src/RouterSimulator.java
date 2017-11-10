@@ -14,7 +14,7 @@ Output GUIs added by Ch. Schuba 2007.
 
 public class RouterSimulator {
 
-  public static final int NUM_NODES = 3;
+  public static final int NUM_NODES = 6;
   public static final int INFINITY = 999;
 
   public static final boolean LINKCHANGES = true;
@@ -92,14 +92,17 @@ should not have to, and you defeinitely should not have to modify
     	for(int j=0; j<NUM_NODES; j++)
     		connectcosts[i][j] = INFINITY;
     
-    connectcosts[0][1]=2;
-    connectcosts[1][0]=2;
+    connectcosts[0][1]=1;
+    connectcosts[1][0]=1;
     
     connectcosts[1][2]=2;
     connectcosts[2][1]=2;
         
-    connectcosts[0][2]=10;
-    connectcosts[2][0]=10;
+    connectcosts[3][4]=2;
+    connectcosts[4][3]=2;
+    
+    connectcosts[4][5]=1;
+    connectcosts[5][4]=1;
     
     nodes = new RouterNode[NUM_NODES];
     for(int i=0; i<NUM_NODES; i++){
@@ -118,11 +121,20 @@ should not have to, and you defeinitely should not have to modify
         evptr = new Event();
         evptr.evtime =  40;
         evptr.evtype =  LINK_CHANGE;
-        evptr.eventity =  1;
+        evptr.eventity =  0;
         evptr.rtpktptr =  null;
-        evptr.dest = 2;
-        evptr.cost = INFINITY;
+        evptr.dest = 5;
+        evptr.cost = 2;
         insertevent(evptr);
+        
+//        evptr = new Event();
+//        evptr.evtime =  60;
+//        evptr.evtype =  LINK_CHANGE;
+//        evptr.eventity =  0;
+//        evptr.rtpktptr =  null;
+//        evptr.dest = 5;
+//        evptr.cost = INFINITY;
+//        insertevent(evptr);
       
     }
   
@@ -262,10 +274,6 @@ should not have to, and you defeinitely should not have to modify
     }
     if (packet.destid<0 || packet.destid > NUM_NODES-1) {
       myGUI.println("WARNING: illegal dest id in your packet, ignoring packet!");
-      return;
-    }
-    if (packet.sourceid == packet.destid)  {
-      myGUI.println("WARNING: source and destination id's the same, ignoring packet!");
       return;
     }
    
