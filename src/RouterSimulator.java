@@ -14,7 +14,7 @@ Output GUIs added by Ch. Schuba 2007.
 
 public class RouterSimulator {
 
-  public static final int NUM_NODES = 6;
+  public static final int NUM_NODES = 3;
   public static final int INFINITY = 999;
 
   public static final boolean LINKCHANGES = true;
@@ -92,18 +92,13 @@ should not have to, and you defeinitely should not have to modify
     	for(int j=0; j<NUM_NODES; j++)
     		connectcosts[i][j] = INFINITY;
     
-    connectcosts[0][1]=1;
-    connectcosts[1][0]=1;
-    
-    connectcosts[1][2]=2;
-    connectcosts[2][1]=2;
-        
-    connectcosts[3][4]=2;
-    connectcosts[4][3]=2;
-    
-    connectcosts[4][5]=1;
-    connectcosts[5][4]=1;
-    
+    connectcosts[0][1]=4;  
+    connectcosts[0][2]=1;
+    connectcosts[1][0]=4;
+    connectcosts[1][2]=50;
+    connectcosts[2][0]=1;
+    connectcosts[2][1]=50;
+
     nodes = new RouterNode[NUM_NODES];
     for(int i=0; i<NUM_NODES; i++){
       HashMap<Integer,Integer> neighbors = new HashMap<Integer,Integer>();
@@ -123,18 +118,27 @@ should not have to, and you defeinitely should not have to modify
         evptr.evtype =  LINK_CHANGE;
         evptr.eventity =  0;
         evptr.rtpktptr =  null;
-        evptr.dest = 5;
-        evptr.cost = 2;
+        evptr.dest = 1;
+        evptr.cost = 100;
         insertevent(evptr);
         
-//        evptr = new Event();
-//        evptr.evtime =  60;
-//        evptr.evtype =  LINK_CHANGE;
-//        evptr.eventity =  0;
-//        evptr.rtpktptr =  null;
-//        evptr.dest = 5;
-//        evptr.cost = INFINITY;
-//        insertevent(evptr);
+        evptr = new Event();
+        evptr.evtime =  41;
+        evptr.evtype =  LINK_CHANGE;
+        evptr.eventity =  0;
+        evptr.rtpktptr =  null;
+        evptr.dest = 2;
+        evptr.cost = INFINITY;
+        insertevent(evptr);
+        
+        evptr = new Event();
+        evptr.evtime =  42;
+        evptr.evtype =  LINK_CHANGE;
+        evptr.eventity =  2;
+        evptr.rtpktptr =  null;
+        evptr.dest = 0;
+        evptr.cost = 10;
+        insertevent(evptr);
       
     }
   
