@@ -375,20 +375,19 @@ public class RouterNode {
 
 		myGUI.println("Current table for " + myID + "  at time " + sim.getClocktime());
 
-		String cabezal=F.format("O/D" , 15);
+		String cabezal=F.format("O/D" , 12);
 		Boolean cabezalImprimir=true;
 		String out;
 		Iterator<Entry<Integer, HashMap<Integer, Integer[]>>> itO = map.entrySet().iterator();
 	  
 		Boolean origenImprimir;
-		//Itero sobre la tabla de ruteo y mando a pantalla el cabezal y costos
+		//Itero sobre la tabla de ruteo para la topologia y mando a pantalla el cabezal y costos
 		while (itO.hasNext()) {
 			Map.Entry<Integer, HashMap<Integer, Integer[]>> o = (Map.Entry<Integer, HashMap<Integer, Integer[]>>)itO.next();
 			Integer y=(Integer) o.getKey();
 			origenImprimir=true;  
 			out="";
-		  
-			Iterator<Entry<Integer, Integer[]>> itI = ((HashMap<Integer, Integer[]>) o.getValue()).entrySet().iterator();
+			Iterator<Entry<Integer, Integer[]>> itI= ((HashMap<Integer, Integer[]>) o.getValue()).entrySet().iterator();
 			while (itI.hasNext()) {
 			  
 				Map.Entry<Integer, Integer[]> i = (Map.Entry<Integer, Integer[]>)itI.next();
@@ -399,7 +398,17 @@ public class RouterNode {
 				if(origenImprimir)
 					out=out+formatearNumero(y);
 				origenImprimir=false;
-				out=out+formatearDato(caminoCosto[0],caminoCosto[1]);
+				//si estoy imprimiendo la fila correspondiente al nodo actual, los datos de topologia los saco de mi estadoenlace
+				if(y==myID)
+					if(miEstadoEnlace.get(x)!=null)//es decir si tengo link a ese destino
+						out=out+formatearNumero(miEstadoEnlace.get(x));
+					else
+						if(x!=y)//sino tengo el link y si el origen y el destino son diferentes va infinito
+							out=out+formatearNumero(sim.INFINITY);
+						else//mi estado enlace no contiene al propio nodo, contemplo este caso
+							out=out+formatearNumero(0);
+				else
+					out=out+formatearNumero(caminoCosto[1]);
 			  
 			}    
 			  
@@ -409,6 +418,24 @@ public class RouterNode {
 			myGUI.println(out);
 			  
 		}
+		
+		  
+		
+		//Itero sobre mi estado enlace para la tabla de forwarding
+		myGUI.println();
+		myGUI.println("     Dest      NxtHp      Costo"); 
+		Iterator it = map.get(myID).entrySet().iterator();
+		String out2="";
+		 
+		while (it.hasNext()) {
+			Map.Entry e = (Map.Entry)it.next();
+			Integer key=(Integer) e.getKey();
+			Integer[] caminoCosto=(Integer[]) e.getValue();
+			out2=formatearNumero(key);
+			out2=out2+formatearNumero(caminoCosto[0])+formatearNumero(caminoCosto[1]);
+			myGUI.println(out2);  
+		}
+		
 	}
 
 	@SuppressWarnings("static-access")
