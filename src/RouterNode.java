@@ -13,6 +13,8 @@ public class RouterNode {
 	private HashMap<Integer, HashMap<Integer, Integer[]>> map;
 	private HashMap<Integer, Integer> miEstadoEnlace;
 	private Integer serialFlood=1;
+	private Boolean llegaInfo=false;
+	private String info="";
 
 	private List<RouterPacket> listaFloodControlado=new ArrayList<RouterPacket>();
 	//--------------------------------------------------
@@ -64,6 +66,7 @@ public class RouterNode {
 		   
 		//Notifico a todos mis vecinos que hubo cambios dado que antes no tenia datos
 		hagoFlooding(null);	
+		llegaInfo=true;
 	
 	}
   
@@ -94,7 +97,7 @@ public class RouterNode {
 					}	
 					if(vecinoVector.get(v2)==null){
 	
-						if(v1==v2)
+						if(v1.compareTo(v2)==0)
 							vecinoVector.put(v2, new Integer[]{null,0,0});
 						else
 							vecinoVector.put(v2, new Integer[]{null,this.sim.INFINITY,0});
@@ -139,8 +142,7 @@ public class RouterNode {
 		if(pktToFlood==null) {
 			//si este nodo comienza el flooding obtengo su estado enlace
 			dv= obtengoMiEstadoEnlace();
-			if (myID == 0 && dv.containsKey(2))
-				System.out.println("lo tiene");
+			
 		}else{
 			
 		  //si es flooding de un paquete de otro nodo obtengo esos datos para el reenvio
@@ -156,9 +158,6 @@ public class RouterNode {
 			while (it1.hasNext()){
 				Integer vecinoID=((Map.Entry<Integer, Integer>)it1.next()).getKey();
 				pkt= new RouterPacket(origen, vecinoID, (HashMap<Integer, Integer>) dv.clone());
-				
-				if (myID == 0 && vecinoID == 5 && dv.containsKey(2))
-					System.out.println("dads");
 				sendUpdate(pkt);
 			}
 			if(pkt!=null)
@@ -170,7 +169,7 @@ public class RouterNode {
 	private Boolean floodingControlado(RouterPacket pkt){
 	  
 		for (RouterPacket pf : listaFloodControlado) 
-			if(pkt.sourceid==pf.sourceid && pf.mincost.get(-1)==pkt.mincost.get(-1))
+			if(pkt.sourceid==pf.sourceid && pf.mincost.get(-1).compareTo(pkt.mincost.get(-1))==0)
 				return true;
 		return false;
 		
@@ -214,7 +213,7 @@ public class RouterNode {
 					
 					//Solo si el minimo y el nodo donde está it2 son vecinos. (Recordar que la fila del map para el nodo minimo no tiene los calculos de Dijkstra para ese nodo
 					//sino que tiene la topología de la red para el mismo
-					if ((distanciasAlNodoMinimo.get(aux2.getKey())[1] != this.sim.INFINITY)){
+					if ((distanciasAlNodoMinimo.get(aux2.getKey())[1].compareTo(this.sim.INFINITY))!=0){
 					
 						int distanciaActual = miEstadoEnlaceEnTablaR.get(aux2.getKey())[1];
 						int distanciaCandidata = miEstadoEnlaceEnTablaR.get(idNodoMin)[1] + distanciasAlNodoMinimo.get(aux2.getKey())[1];
@@ -251,14 +250,14 @@ public class RouterNode {
 		while (it.hasNext()){
 			
 			Map.Entry<Integer, Integer[]> e = (Map.Entry<Integer, Integer[]>)it.next();
-			if((e.getValue()[2] == 0))
+			if((e.getValue()[2].compareTo(0) == 0))
 			{
 				if(primero)
 				{
 					res = e.getKey();
 					primero=false;
 				}
-				if ((min > e.getValue()[1] ) ){
+				if (e.getValue()[1]!=null && (min > e.getValue()[1].intValue() ) ){
 					min = e.getValue()[1];
 					res = e.getKey();
 					
@@ -273,16 +272,9 @@ public class RouterNode {
 
 	public void recvUpdate(RouterPacket pkt){
 		
-//		if (myID == 5 && pkt.sourceid == 0) {
-//			System.out.println("LlEGA" + pkt.mincost.size());
-//			
-//			if (pkt.mincost.containsKey(1))
-//				System.out.println("tiene el 2");
-//			
-//		}
-		
 		if(!floodingControlado(pkt)){
-			
+		
+			llegaInfo=true;
 			HashMap<Integer,Integer> mincost = pkt.mincost;
 			//Id del origen del flooding
 			Integer origen=pkt.sourceid;
@@ -294,7 +286,7 @@ public class RouterNode {
 				map.get(origen).put(origen,new Integer[]{null,0,0} );
 				
 			}  	
-		    
+			info="recvUpdate--OrigenPkt="+origen+"--Serial="+mincost.get(-1)+"--LS(destino,costo){";
 			//itero sobre el estado de enlace de dicho nodo origen
 			Iterator<Entry<Integer, Integer>> it = mincost.entrySet().iterator();
 			while (it.hasNext()) {
@@ -304,7 +296,7 @@ public class RouterNode {
 			    //Obtengo el ID del vecino de dicho origen
 			    Integer idVecinoOrigen=(Integer) e.getKey();
 			    //Descarto la entrada -1 del hashmap que contiene el serial y no un nodo
-			    if(idVecinoOrigen!=-1){
+			    if(idVecinoOrigen.compareTo(-1)!=0){
 			    	
 			    	//Obtengo el costo del vecino de dicho origen
 				    Integer costoVecinoOrigen=(Integer) e.getValue();
@@ -313,10 +305,12 @@ public class RouterNode {
 					map.get(origen).put(idVecinoOrigen,new Integer[]{null,costoVecinoOrigen,0} );
 						    
 					//si este vecino del origen no existe lo agrego a mi lista de destinos
-			    
+					info=info+"("+idVecinoOrigen+","+costoVecinoOrigen+");";
 			    }			    
+			   
 			
 			}
+			info=info+"}";
 			
 			//relleno los valores infinitos y aprendo topologia
 			boolean hayNuevoNodo = aprendoTopologia(origen);	  
@@ -373,8 +367,10 @@ public class RouterNode {
   
 	public void printDistanceTable() {
 
+		if(llegaInfo)
+		{
 		myGUI.println("Current table for " + myID + "  at time " + sim.getClocktime());
-
+		myGUI.println(info);
 		String cabezal=F.format("O/D" , 12);
 		Boolean cabezalImprimir=true;
 		String out;
@@ -436,6 +432,8 @@ public class RouterNode {
 			myGUI.println(out2);  
 		}
 		
+		llegaInfo=false;
+		}
 	}
 
 	@SuppressWarnings("static-access")
@@ -464,9 +462,10 @@ public class RouterNode {
 	}
   
 	public void updateLinkCost(int dest, int newcost) {
-		
+		llegaInfo=true;
+		info="UpdateLinkCost--Destino="+dest+"--NuevoCosto="+newcost;
 		//Me aseguro que el costo sea realmente diferente
-		if((map.get(myID).get(dest) == null) ||(map.get(myID).get(dest)[1]!=newcost)){
+		if((map.get(myID).get(dest) == null) ||(map.get(myID).get(dest)[1].compareTo(newcost)!=0)){
 		  				
 			if (newcost != sim.INFINITY) {
 				
