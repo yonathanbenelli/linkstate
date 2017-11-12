@@ -30,7 +30,16 @@ public class RouterNode {
 	   
 	    //Itero sobre los costos de los vecinos recibido en el construcor
 	    Iterator<Entry<Integer, Integer>> it = costs.entrySet().iterator();
-				
+
+	    //Seba: lo saco del while por si el grafo tiene nodos aislados y costs es vacío.
+	    HashMap<Integer, Integer[]> miEstadoEnlaceEnTablaR=new HashMap<Integer,Integer[]>();
+		miEstadoEnlace=new HashMap<Integer,Integer>();
+
+	    if (costs.size() == 0) {
+			miEstadoEnlaceEnTablaR.put(myID, new Integer[]{myID,0,0});
+			map.put(myID, miEstadoEnlaceEnTablaR);
+	    }
+	    
 		while (it.hasNext()) {
 			  
 			Map.Entry<Integer, Integer> e = (Map.Entry<Integer, Integer>)it.next();
@@ -42,10 +51,10 @@ public class RouterNode {
 			//Obtengo mi estado de enlace de la tabla de ruteo, sino existe aun lo instancio y me asigno a mi mismo el costo 0
 			//miEstadoEnlaceEnTablaR es mis costos  mis vecinos (y a mi mismo), mas los destinos alcanzables y sus costos luego de aplicar dijkstra
 			//miEstadoEnlace es solo mis costos a mis vecinos (y a mi mismo)
-			HashMap<Integer, Integer[]> miEstadoEnlaceEnTablaR=map.get(myID);
-			
-			if(miEstadoEnlaceEnTablaR==null) {
+			miEstadoEnlaceEnTablaR=map.get(myID);
 				
+			if(miEstadoEnlaceEnTablaR==null) {
+
 				//me agrego a mi mismo como destino
 				miEstadoEnlaceEnTablaR=new HashMap<Integer,Integer[]>();
 				miEstadoEnlaceEnTablaR.put(myID, new Integer[]{myID,0,0});
@@ -222,7 +231,11 @@ public class RouterNode {
 							//En la pos 0 va el nodo por el que se llega al nodo minimo
 							//En la pos 1 va la nueva distancia al nodo donde estÃ¡ it2 
 							//Se copia en el nodo la puerta por donde sale el padre.
-							miEstadoEnlaceEnTablaR.put( aux2.getKey(),new Integer[]{miEstadoEnlaceEnTablaR.get(idNodoMin)[0],distanciaCandidata,miEstadoEnlaceEnTablaR.get( aux2.getKey())[2]});
+							//Como quedan nodos que alguna ves estuvieron conectados, hay q contemplarlo en Dijkstra.
+							if (distanciaCandidata == sim.INFINITY)
+								miEstadoEnlaceEnTablaR.put( aux2.getKey(),new Integer[]{null,distanciaCandidata,miEstadoEnlaceEnTablaR.get( aux2.getKey())[2]});
+							else
+								miEstadoEnlaceEnTablaR.put( aux2.getKey(),new Integer[]{miEstadoEnlaceEnTablaR.get(idNodoMin)[0],distanciaCandidata,miEstadoEnlaceEnTablaR.get( aux2.getKey())[2]});
 						
 						}
 					
@@ -274,6 +287,7 @@ public class RouterNode {
 		
 		if(!floodingControlado(pkt)){
 		
+			
 			llegaInfo=true;
 			HashMap<Integer,Integer> mincost = pkt.mincost;
 			//Id del origen del flooding
@@ -356,7 +370,7 @@ public class RouterNode {
 
 		//formateo los costos e IDs para la salida en pantalla
 		String s;
-		if(i==sim.INFINITY)
+		if(i == null || i==sim.INFINITY)
 			s="#";
 		else
 			s=i.toString();
@@ -414,15 +428,13 @@ public class RouterNode {
 			myGUI.println(out);
 			  
 		}
-		
-		  
-		
+
 		//Itero sobre mi estado enlace para la tabla de forwarding
 		myGUI.println();
 		myGUI.println("     Dest      NxtHp      Costo"); 
+
 		Iterator it = map.get(myID).entrySet().iterator();
 		String out2="";
-		 
 		while (it.hasNext()) {
 			Map.Entry e = (Map.Entry)it.next();
 			Integer key=(Integer) e.getKey();
@@ -450,7 +462,7 @@ public class RouterNode {
 			Map.Entry<Integer, Integer[]> o = (Map.Entry<Integer, Integer[]>)itO.next();
 		    Integer key=(Integer) o.getKey();
 		    
-		    if(miEstadoEnlace.containsKey(key))
+		    if(miEstadoEnlace.containsKey(key) && miEstadoEnlace.get(key) != sim.INFINITY)
 		   		miEstadoEnlaceEnTablaR.put(key, new Integer[]{key,miEstadoEnlace.get(key),0});
 		    else
 		        miEstadoEnlaceEnTablaR.put(key, new Integer[]{null,sim.INFINITY,0});
